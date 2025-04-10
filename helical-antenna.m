@@ -1,47 +1,92 @@
-% Helix Antenna Design and Analysis Script
+%Helical Antenna Design
+% Government Research Project - Advanced Antenna Systems Division
+% Date: 10-Apr-2025
 
-% Clear workspace and command window
-clear;
-clc;
+%% 1. Create Helix Antenna Structure
+hx = helix(...
+    'Radius', 0.028, ...       % 28 mm radius (λ/4 at 1.8 GHz)
+    'Width', 1.2e-3, ...       % 1.2 mm strip width
+    'Turns', 4, ...            % Number of turns
+    'Spacing', 0.035, ...      % 35 mm turn spacing
+    'GroundPlaneRadius', 0.075,... % 75 mm ground plane
+    'Substrate', dielectric('Air'),...
+    'Conductor', metal('Copper'));
 
-% Define parameters for the helix antenna
-frequency = 1.8e9; % Frequency in Hz
-wavelength = physconst('LightSpeed') / frequency; % Wavelength
-turns = 5; % Number of turns
-diameter = 0.1; % Diameter of the helix in meters
-spacing = 0.05; % Spacing between turns in meters
+%% 2. Fundamental Analysis Parameters
+fc = 1.8e9; % Center frequency (1.8 GHz)
+freqRange = linspace(1.7e9, 2.2e9, 51); % 1.7-2.2 GHz sweep
+wavelength = physconst('lightspeed')/fc;
 
-% Create a helix antenna
-helix = helix('NumTurns', turns, ...
-              'Diameter', diameter, ...
-              'Spacing', spacing, ...
-              'Tilt', 0, ...
-              'GroundPlaneLength', 0.5); % Ground plane length
+%% 3. Impedance and S-Parameter Analysis
+% Impedance vs Frequency
+figure('Name','Impedance Characteristics');
+impedance(hx, freqRange); 
+grid on;
+title('Input Impedance vs Frequency');
 
-% Analyze the antenna
-% Impedance
-impedance = impedance(helix, frequency);
-disp(['Impedance at ', num2str(frequency/1e9), ' GHz: ', num2str(impedance), ' Ohms']);
+% S11 Parameters
+figure('Name','Return Loss');
+s = sparameters(hx, freqRange);
+rfplot(s);
+hold on;
+plot(fc/1e9, -10, 'ro', 'MarkerSize', 8); % -10dB marker
+legend('S_{11}','-10 dB Reference');
+title('S-Parameter (Return Loss)');
 
-% S-parameters
-s_params = sparameters(helix, frequency);
-disp('S-parameters:');
-disp(s_params.Parameters);
+%% 4. Radiation Pattern Analysis
+% 3D Radiation Pattern
+figure('Name','3D Radiation Pattern');
+pattern(hx, fc);
+title('3D Radiation Pattern at 1.8 GHz');
 
-% Radiation pattern
-figure;
-pattern(helix, frequency);
-title('Radiation Pattern at 1.8 GHz');
+% Azimuth Cut (φ=0°)
+figure('Name','Azimuth Pattern');
+patternAzimuth(hx, fc, 'Elevation', 0);
+title('Azimuth Cut (Elevation = 0°)');
 
-% Current distribution
-figure;
-current(helix, frequency);
+% Elevation Cut (θ=90°)
+figure('Name','Elevation Pattern');
+patternElevation(hx, fc, 'Azimuth', 0);
+title('Elevation Cut (Azimuth = 0°)');
+
+%% 5. Current Distribution Analysis
+figure('Name','Surface Currents');
+current(hx, fc);
 title('Current Distribution at 1.8 GHz');
 
-% Export the design as a MATLAB script
-exportScript = 'helix_antenna_design.m';
-export(helix, exportScript);
-disp(['Design exported to ', exportScript]);
+%% 6. Advanced Visualization
+% Mesh Representation
+figure('Name','Antenna Mesh');
+mesh(hx, 'MaxEdgeLength', wavelength/20);
+title('Mesh Visualization');
 
-% Save the current figure as an image
-saveas(gcf, 'radiation_pattern.png');
+% Polarization Characteristics
+figure('Name','Axial Ratio');
+axialRatio(hx, fc, 0:5:360, 0);
+title('Axial Ratio vs Phi (θ=0°)');
+
+%% 7. AI-Based Optimization (Requires Global Optimization Toolbox)
+% Optimize for 50 Ω impedance at 1.8 GHz
+optimized_hx = design(hx, fc, ...
+    'Height', 0.15, ... % Initial height estimate
+    'GroundPlaneRadius', 0.075, ...
+    'ObjectiveFunction', 'S11', ...
+    'SystemObjective', -30, ... % Target S11 (-30 dB)
+    'UseGeneticAlgorithm', true);
+
+%% 8. Export Antenna Parameters
+antenna_data = struct(...
+    'Geometry', hx.Geometry,...
+    'Material', hx.Material,...
+    'Performance', analyze(hx, fc));
+save('helix_antenna_design.mat', 'antenna_data');
+
+%% Support Functions
+function performance = analyze(antenna, freq)
+    % Calculate key performance metrics
+    perf.Impedance = impedance(antenna, freq);
+    perf.Gain = pattern(antenna, freq);
+    perf.Efficiency = efficiency(antenna, freq);
+    perf.AxialRatio = axialRatio(antenna, freq);
+    performance = perf;
+end
