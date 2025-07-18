@@ -1,0 +1,75 @@
+%% 1. Create Dipole Antenna Structure
+dp = dipole(...
+    'Length', 0.33, ...
+    'Width', 0.005, ...
+    'Conductor', metal('Copper'));
+
+%% 2. Fundamental Analysis Parameters
+fc = 1.8e9;
+freqRange = linspace(1.7e9, 2.2e9, 51);
+wavelength = physconst('lightspeed')/fc;
+
+%% 3. Impedance and S-Parameter Analysis
+figure('Name','Impedance Characteristics');
+impedance(dp, freqRange);
+grid on;
+title('Input Impedance vs Frequency');
+
+figure('Name','Return Loss');
+s = sparameters(dp, freqRange);
+rfplot(s);
+hold on;
+plot(fc/1e9, -10, 'ro', 'MarkerSize', 8);
+legend('S_{11}','-10 dB Reference');
+title('S-Parameter (Return Loss)');
+
+%% 4. Radiation Pattern Analysis
+figure('Name','3D Radiation Pattern');
+pattern(dp, fc);
+title('3D Radiation Pattern at 1.8 GHz');
+
+figure('Name','Azimuth Pattern');
+patternAzimuth(dp, fc, 'Elevation', 0);
+title('Azimuth Cut (Elevation = 0°)');
+
+figure('Name','Elevation Pattern');
+patternElevation(dp, fc, 'Azimuth', 0);
+title('Elevation Cut (Azimuth = 0°)');
+
+%% 5. Current Distribution Analysis
+figure('Name','Surface Currents');
+current(dp, fc);
+title('Current Distribution at 1.8 GHz');
+
+%% 6. Advanced Visualization
+figure('Name','Antenna Mesh');
+mesh(dp, 'MaxEdgeLength', wavelength/20);
+title('Mesh Visualization');
+
+figure('Name','Axial Ratio');
+axialRatio(dp, fc, 0:5:360, 0);
+title('Axial Ratio vs Phi (θ=0°)');
+
+%% 7. AI-Based Optimization (Optional)
+optimized_dp = design(dp, fc, ...
+    'Length', 0.33, ...
+    'Width', 0.005, ...
+    'ObjectiveFunction', 'S11', ...
+    'SystemObjective', -30, ...
+    'UseGeneticAlgorithm', true);
+
+%% 8. Export Antenna Parameters
+antenna_data = struct(...
+    'Geometry', dp.Geometry,...
+    'Material', dp.Material,...
+    'Performance', analyze(dp, fc));
+save('dipole_antenna_design.mat', 'antenna_data');
+
+%% Support Functions
+function performance = analyze(antenna, freq)
+    perf.Impedance = impedance(antenna, freq);
+    perf.Gain = pattern(antenna, freq);
+    perf.Efficiency = efficiency(antenna, freq);
+    perf.AxialRatio = axialRatio(antenna, freq);
+    performance = perf;
+end
