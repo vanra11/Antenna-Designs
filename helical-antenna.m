@@ -1,6 +1,4 @@
 %Helical Antenna Design
-% Government Research Project - Advanced Antenna Systems Division
-% Date: 10-Apr-2025
 
 %% 1. Create Helix Antenna Structure
 hx = helix(...
